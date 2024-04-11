@@ -3,17 +3,17 @@ from flask_sqlalchemy import SQLAlchemy
 import os
 import uuid
 from faker import Faker
-from flask_jwt_extended import JWTManager, jwt_required, create_access_token, get_jwt_identity
+# from flask_jwt_extended import JWTManager, jwt_required, create_access_token, get_jwt_identity
 from werkzeug.security import generate_password_hash 
-import jwt
-import datetime
-from datetime import timedelta
-from functools import wraps
+# import jwt
+# import datetime
+# from datetime import timedelta
+# from functools import wraps
 
 
 
 app = Flask(__name__)
-jwt = JWTManager(app)
+# jwt = JWTManager(app)
 
 base_dir = os.path.abspath(os.path.dirname(__file__))
 db_dir = os.path.join(base_dir, 'data')
@@ -113,47 +113,47 @@ def generate_fake_data():
         print("Fake data generated and added to the database.")
 
 
-def token_required(func):
-    @wraps(func)
-    def decorated(*args):
-        token = request/args.get('token')
-        if not token:
-            return jsonify({'Alert!': 'Token is missing!'})
-        try:
-            payload =jwt.decode(token, app.config['SECRET_KEY'])
-        except:
-            return jsonify({'Alert!': 'Invalid Token!'})
+# def token_required(func):
+#     @wraps(func)
+#     def decorated(*args):
+#         token = request/args.get('token')
+#         if not token:
+#             return jsonify({'Alert!': 'Token is missing!'})
+#         try:
+#             payload =jwt.decode(token, app.config['SECRET_KEY'])
+#         except:
+#             return jsonify({'Alert!': 'Invalid Token!'})
         
-    return decorated
+#     return decorated
 
-@app.route('/')
-def home():
-    if not session.get('logged_in'):
-        return render_template('login.html')
-    else:
-        return 'Logged in currently!'
+# @app.route('/')
+# def home():
+#     if not session.get('logged_in'):
+#         return render_template('login.html')
+#     else:
+#         return 'Logged in currently!'
     
-@app.route('/public')
-def public():
-    return 'For Public'
+# @app.route('/public')
+# def public():
+#     return 'For Public'
 
-@app.route('/auth')
-@jwt_required()
-def auth():
-    return 'JWT is verified. Welcome to your dahsboard!'
+# @app.route('/auth')
+# @jwt_required()
+# def auth():
+#     return 'JWT is verified. Welcome to your dahsboard!'
     
-@app.route('/login', methods=['POST'])
-def login():
-   if request.form['username'] and request.form['password'] == '123456':
-        session['logged_in'] =  True
-        token = jwt.encode({
-            'user': request.form['username'],
-            'expiration': str(datetime.utcnow() + timedelta(seconds=120))
-        },
-           app.config['SECRET_KEY'])
-        return jsonify({'token':token.decode('utf-8')})
-   else:
-       return make_response('Unable to verify', 403, {'WWW-Authenticate': 'Basic ealm:"Authentication Failed!'})
+# @app.route('/login', methods=['POST'])
+# def login():
+#    if request.form['username'] and request.form['password'] == '123456':
+#         session['logged_in'] =  True
+#         token = jwt.encode({
+#             'user': request.form['username'],
+#             'expiration': str(datetime.utcnow() + timedelta(seconds=120))
+#         },
+#            app.config['SECRET_KEY'])
+#         return jsonify({'token':token.decode('utf-8')})
+#    else:
+#        return make_response('Unable to verify', 403, {'WWW-Authenticate': 'Basic ealm:"Authentication Failed!'})
 
 @app.route('/assets', methods=['GET'])
 # @jwt_required()
@@ -223,6 +223,42 @@ def delete_asset(asset_id):
     db.session.delete(asset)
     db.session.commit()
     return jsonify({'message': 'Asset deleted successfully'})
+
+@app.route('/assigned_assets', methods=['GET'])
+def get_all_assigned_assets():
+    assigned_assets = AssignedAsset.query.all()
+    assigned_assets_list = []
+    for asset in assigned_assets:
+        asset_data = {
+            'id': asset.id,
+            'name': asset.name,
+            'serial_no': asset.serial_no,
+            'model': asset.model,
+            'asset_id': asset.asset_id,
+            'status': asset.status,
+            'assigned_to': asset.assigned_to,
+            'assigned_date': asset.assigned_date.strftime('%Y-%m-%d') if asset.assigned_date else None
+        }
+        assigned_assets_list.append(asset_data)
+    return jsonify(assigned_assets_list)
+
+@app.route('/assigned_assets/<int:asset_id>', methods=['GET'])
+def get_assigned_asset(asset_id):
+    asset = AssignedAsset.query.get(asset_id)
+    if not asset:
+        return jsonify({'message': 'Assigned Asset not found'}), 404
+    asset_data = {
+        'id': asset.id,
+        'name': asset.name,
+        'serial_no': asset.serial_no,
+        'model': asset.model,
+        'asset_id': asset.asset_id,
+        'status': asset.status,
+        'assigned_to': asset.assigned_to,
+        'assigned_date': asset.assigned_date.strftime('%Y-%m-%d') if asset.assigned_date else None
+    }
+    return jsonify(asset_data)
+
 
 @app.route('/assigned_assets', methods=['POST'])
 def create_assigned_asset():
