@@ -156,7 +156,7 @@ def login():
        return make_response('Unable to verify', 403, {'WWW-Authenticate': 'Basic ealm:"Authentication Failed!'})
 
 @app.route('/assets', methods=['GET'])
-@jwt_required()
+# @jwt_required()
 def get_all_assets():
     assets = Asset.query.all()
     asset_list = []
