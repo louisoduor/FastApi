@@ -138,7 +138,7 @@ def public():
     return 'For Public'
 
 @app.route('/auth')
-@token_required
+@jwt_required()
 def auth():
     return 'JWT is verified. Welcome to your dahsboard!'
     
@@ -156,7 +156,7 @@ def login():
        return make_response('Unable to verify', 403, {'WWW-Authenticate': 'Basic ealm:"Authentication Failed!'})
 
 @app.route('/assets', methods=['GET'])
-# @token_required()
+@jwt_required()
 def get_all_assets():
     assets = Asset.query.all()
     asset_list = []
