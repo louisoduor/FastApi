@@ -1,11 +1,19 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, make_response, render_template, session
 from flask_sqlalchemy import SQLAlchemy
 import os
 import uuid
 from faker import Faker
-from werkzeug.security import generate_password_hash, check_password_hash 
+from flask_jwt_extended import JWTManager, jwt_required, create_access_token, get_jwt_identity
+from werkzeug.security import generate_password_hash 
+import jwt
+import datetime
+from datetime import timedelta
+from functools import wraps
+
+
 
 app = Flask(__name__)
+jwt = JWTManager(app)
 
 base_dir = os.path.abspath(os.path.dirname(__file__))
 db_dir = os.path.join(base_dir, 'data')
@@ -13,7 +21,7 @@ os.makedirs(db_dir, exist_ok=True)
 
 db_path_assets = os.path.join(db_dir, 'assets.db')
 
-app.config['SECRET_KEY'] = 'thisissecret'
+app.config['SECRET_KEY'] = '4023cdeb28be4c9dbfd5b6c03dd8a847'
 app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path_assets}'
 db = SQLAlchemy(app)
 fake = Faker()  
@@ -104,7 +112,51 @@ def generate_fake_data():
         db.session.commit()
         print("Fake data generated and added to the database.")
 
+
+def token_required(func):
+    @wraps(func)
+    def decorated(*args):
+        token = request/args.get('token')
+        if not token:
+            return jsonify({'Alert!': 'Token is missing!'})
+        try:
+            payload =jwt.decode(token, app.config['SECRET_KEY'])
+        except:
+            return jsonify({'Alert!': 'Invalid Token!'})
+        
+    return decorated
+
+@app.route('/')
+def home():
+    if not session.get('logged_in'):
+        return render_template('login.html')
+    else:
+        return 'Logged in currently!'
+    
+@app.route('/public')
+def public():
+    return 'For Public'
+
+@app.route('/auth')
+@token_required
+def auth():
+    return 'JWT is verified. Welcome to your dahsboard!'
+    
+@app.route('/login', methods=['POST'])
+def login():
+   if request.form['username'] and request.form['password'] == '123456':
+        session['logged_in'] =  True
+        token = jwt.encode({
+            'user': request.form['username'],
+            'expiration': str(datetime.utcnow() + timedelta(seconds=120))
+        },
+           app.config['SECRET_KEY'])
+        return jsonify({'token':token.decode('utf-8')})
+   else:
+       return make_response('Unable to verify', 403, {'WWW-Authenticate': 'Basic ealm:"Authentication Failed!'})
+
 @app.route('/assets', methods=['GET'])
+# @token_required()
 def get_all_assets():
     assets = Asset.query.all()
     asset_list = []
@@ -212,6 +264,7 @@ def delete_assigned_asset(asset_id):
     db.session.delete(asset)
     db.session.commit()
     return jsonify({'message': 'Assigned Asset deleted successfully'})
+
 
 @app.route('/employees', methods=['GET'])
 def get_all_employees():
